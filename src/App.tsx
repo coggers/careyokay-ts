@@ -1,35 +1,59 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useSpotify } from './hooks/useSpotify.ts';
+import { Scopes, SearchResults, SpotifyApi } from '@spotify/web-api-ts-sdk';
+import { useEffect, useState } from 'react'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  
+  const sdk = useSpotify(
+    import.meta.env.VITE_SPOTIFY_CLIENT_ID, 
+    import.meta.env.VITE_REDIRECT_TARGET, 
+    Scopes.userDetails
+  );
+
+  return sdk
+    ? (<SpotifySearch sdk={sdk} />) 
+    : (<></>);
+}
+
+function SpotifySearch({ sdk }: { sdk: SpotifyApi}) {
+  const [results, setResults] = useState<SearchResults<["artist"]>>({} as SearchResults<["artist"]>);
+
+  useEffect(() => {
+    (async () => {
+      const results = await sdk.search("The Beatles", ["artist"]);
+      setResults(() => results);      
+    })();
+  }, [sdk]);
+
+  // generate a table for the results
+  const tableRows = results.artists?.items.map((artist) => {
+    return (
+      <tr key={artist.id}>
+        <td>{artist.name}</td>
+        <td>{artist.popularity}</td>
+        <td>{artist.followers.total}</td>
+      </tr>
+    );
+  });
 
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <h1>Spotify Search for The Beatles</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Popularity</th>
+            <th>Followers</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tableRows}
+        </tbody>
+      </table>
     </>
   )
 }
 
-export default App
+export default App;
